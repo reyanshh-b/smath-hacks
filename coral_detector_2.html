@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoralScan — Coral Health Detector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:            #04101c;
+    --surface:       #081a2d;
+    --surface2:      #0d2540;
+    --border:        #1a3d5c;
+    --border-bright: #2a5a82;
+    --primary:       #00ccff;
+    --primary-dim:   rgba(0,204,255,0.12);
+    --primary-glow:  rgba(0,204,255,0.25);
+    --healthy:       #00e676;
+    --healthy-dim:   rgba(0,230,118,0.1);
+    --unhealthy:     #ff5252;
+    --unhealthy-dim: rgba(255,82,82,0.1);
+    --text:          #c8e8f8;
+    --text-muted:    #3f6880;
+    --font-display:  'Syne', sans-serif;
+    --font-mono:     'DM Mono', monospace;
+    --font-body:     'DM Sans', sans-serif;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 80%, rgba(0,80,120,0.18) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 20%, rgba(0,40,80,0.22) 0%, transparent 55%),
+      radial-gradient(ellipse 100% 60% at 50% 100%, rgba(0,60,100,0.15) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .particles {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+  .particle {
+    position: absolute;
+    border-radius: 50%;
+    background: var(--primary);
+    opacity: 0;
+    animation: float linear infinite;
+  }
+  @keyframes float {
+    0%   { transform: translateY(100vh) translateX(0) scale(0); opacity: 0; }
+    10%  { opacity: 0.4; }
+    90%  { opacity: 0.15; }
+    100% { transform: translateY(-10vh) translateX(30px) scale(1.2); opacity: 0; }
+  }
+
+  .wrapper {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 1.5rem 4rem;
+  }
+
+  header {
+    width: 100%;
+    max-width: 860px;
+    padding: 2.5rem 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 3rem;
+  }
+  .logo { display: flex; align-items: center; gap: 0.75rem; }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--primary-dim);
+    border: 1px solid var(--primary);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+    box-shadow: 0 0 12px var(--primary-glow);
+  }
+  .logo-text {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    color: #fff;
+  }
+  .logo-text span { color: var(--primary); }
+
+  .model-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 0.4rem 0.9rem;
+  }
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    transition: background 0.4s, box-shadow 0.4s;
+    flex-shrink: 0;
+  }
+  .status-dot.ready {
+    background: var(--healthy);
+    box-shadow: 0 0 8px rgba(0,230,118,0.6);
+    animation: pulse-green 2s ease-in-out infinite;
+  }
+  .status-dot.error { background: var(--unhealthy); }
+  @keyframes pulse-green {
+    0%, 100% { box-shadow: 0 0 8px rgba(0,230,118,0.6); }
+    50%       { box-shadow: 0 0 16px rgba(0,230,118,0.9); }
+  }
+
+  .hero {
+    text-align: center;
+    margin-bottom: 3rem;
+    max-width: 560px;
+  }
+  .hero h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 800;
+    line-height: 1.1;
+    color: #fff;
+    margin-bottom: 1rem;
+  }
+  .hero h1 em {
+    font-style: normal;
+    color: var(--primary);
+    text-shadow: 0 0 30px rgba(0,204,255,0.4);
+  }
+  .hero p {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    line-height: 1.7;
+  }
+
+  .upload-zone {
+    width: 100%;
+    max-width: 560px;
+    aspect-ratio: 4/3;
+    border: 2px dashed var(--border);
+    border-radius: 20px;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    cursor: pointer;
+    transition: border-color 0.3s, background 0.3s, box-shadow 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--primary);
+    background: var(--primary-dim);
+    box-shadow: 0 0 30px rgba(0,204,255,0.1), inset 0 0 30px rgba(0,204,255,0.04);
+  }
+  .upload-zone.has-image {
+    border-style: solid;
+    border-color: var(--border-bright);
+  }
+  .upload-zone input[type=file] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 2;
+  }
+  .upload-icon {
+    font-size: 2.5rem;
+    opacity: 0.4;
+    transition: opacity 0.3s, transform 0.3s;
+  }
+  .upload-zone:hover .upload-icon { opacity: 0.7; transform: translateY(-4px); }
+  .upload-label {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+  .upload-sub {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    opacity: 0.6;
+    font-family: var(--font-mono);
+  }
+
+  .preview-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 18px;
+    opacity: 0;
+    transition: opacity 0.4s;
+    z-index: 0;
+  }
+  .preview-img.visible { opacity: 1; }
+
+  .scan-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(4,16,28,0.75);
+    border-radius: 18px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    z-index: 1;
+  }
+  .scan-overlay.active { opacity: 1; pointer-events: all; }
+  .scan-line {
+    position: absolute;
+    left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--primary), transparent);
+    box-shadow: 0 0 12px rgba(0,204,255,0.5);
+    animation: scan 1.5s ease-in-out infinite;
+  }
+  @keyframes scan {
+    0%   { top: 10%; }
+    50%  { top: 85%; }
+    100% { top: 10%; }
+  }
+  .scan-text {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--primary);
+    letter-spacing: 0.15em;
+    animation: blink 1s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  #uploadPrompt {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .result-card {
+    width: 100%;
+    max-width: 560px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.5s, transform 0.5s, border-color 0.4s, background 0.4s;
+    pointer-events: none;
+  }
+  .result-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: all;
+  }
+  .result-card.healthy {
+    border-color: rgba(0,230,118,0.4);
+    background: linear-gradient(135deg, var(--surface), rgba(0,230,118,0.06));
+    box-shadow: 0 0 30px rgba(0,230,118,0.08);
+  }
+  .result-card.unhealthy {
+    border-color: rgba(255,82,82,0.4);
+    background: linear-gradient(135deg, var(--surface), rgba(255,82,82,0.06));
+    box-shadow: 0 0 30px rgba(255,82,82,0.08);
+  }
+
+  .result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.2rem;
+  }
+  .result-label { display: flex; align-items: center; gap: 0.75rem; }
+  .result-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .healthy .result-dot   { background: #00e676; box-shadow: 0 0 10px rgba(0,230,118,0.7); }
+  .unhealthy .result-dot { background: #ff5252; box-shadow: 0 0 10px rgba(255,82,82,0.7); }
+
+  .result-name {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .healthy .result-name   { color: #00e676; }
+  .unhealthy .result-name { color: #ff5252; }
+
+  .result-confidence {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-align: right;
+  }
+  .result-confidence strong {
+    display: block;
+    font-size: 1.4rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .confidence-bar-track {
+    height: 6px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 1.2rem;
+  }
+  .confidence-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+  }
+  .healthy   .confidence-bar-fill { background: linear-gradient(90deg, #00b248, #00e676); box-shadow: 0 0 8px rgba(0,230,118,0.5); }
+  .unhealthy .confidence-bar-fill { background: linear-gradient(90deg, #c62828, #ff5252); box-shadow: 0 0 8px rgba(255,82,82,0.5); }
+
+  .result-probs {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1.2rem;
+  }
+  .prob-item {
+    flex: 1;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.6rem 0.8rem;
+  }
+  .prob-item-label {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.25rem;
+  }
+  .prob-item-value {
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    font-weight: 500;
+  }
+
+  .result-desc {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+  }
+
+  .no-model-banner {
+    width: 100%;
+    max-width: 560px;
+    background: rgba(255,165,0,0.07);
+    border: 1px solid rgba(255,165,0,0.25);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    margin-top: 1.5rem;
+    display: none;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+  .no-model-banner.visible { display: flex; }
+  .no-model-banner p { font-size: 0.82rem; color: #ffb74d; line-height: 1.6; }
+  .no-model-banner a { color: #ffcc80; font-weight: 600; }
+
+  footer {
+    margin-top: 3rem;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    text-align: center;
+    opacity: 0.5;
+  }
+  footer a { color: var(--primary); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="particles" id="particles"></div>
+
+<div class="wrapper">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🪸</div>
+      <div class="logo-text">Coral<span>Scan</span></div>
+    </div>
+    <div class="model-status">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Loading model...</span>
+    </div>
+  </header>
+
+  <section class="hero">
+    <h1>Is your coral<br><em>healthy?</em></h1>
+    <p>Upload an underwater photo and our AI will analyze the coral's health status in seconds.</p>
+  </section>
+
+  <div class="upload-zone" id="dropZone">
+    <input type="file" id="fileInput" accept="image/*">
+    <img class="preview-img" id="previewImg" alt="Uploaded coral">
+    <div class="scan-overlay" id="scanOverlay">
+      <div class="scan-line"></div>
+      <div class="scan-text">ANALYZING</div>
+    </div>
+    <div id="uploadPrompt">
+      <div class="upload-icon">🌊</div>
+      <div class="upload-label">Drop an image here</div>
+      <div class="upload-sub">or click to browse</div>
+    </div>
+  </div>
+
+  <div class="no-model-banner" id="noModelBanner">
+    <span>⚠️</span>
+    <p>No trained model found. Open <a href="coral_trainer.html">coral_trainer.html</a> to train a model first, then come back here.</p>
+  </div>
+
+  <div class="result-card" id="resultCard">
+    <div class="result-header">
+      <div class="result-label">
+        <div class="result-dot"></div>
+        <div class="result-name" id="resultName">—</div>
+      </div>
+      <div class="result-confidence">
+        CONFIDENCE<strong id="resultConfidence">—</strong>
+      </div>
+    </div>
+    <div class="confidence-bar-track">
+      <div class="confidence-bar-fill" id="confidenceFill"></div>
+    </div>
+    <div class="result-probs" id="resultProbs"></div>
+    <div class="result-desc" id="resultDesc"></div>
+  </div>
+
+  <footer>
+    CoralScan &mdash; SMathHacks 2026 &nbsp;|&nbsp;
+    <a href="coral_trainer.html">Open Dev Trainer →</a>
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.0/dist/mobilenet.min.js"></script>
+
+<script>
+// ── Particles ─────────────────────────────────────────────────────────────────
+(function() {
+  const container = document.getElementById('particles');
+  for (let i = 0; i < 18; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = Math.random() * 3 + 1;
+    p.style.cssText = [
+      'width:' + size + 'px',
+      'height:' + size + 'px',
+      'left:' + (Math.random() * 100) + '%',
+      'animation-duration:' + (Math.random() * 12 + 8) + 's',
+      'animation-delay:' + (Math.random() * 8) + 's',
+      'opacity:0'
+    ].join(';');
+    container.appendChild(p);
+  }
+})();
+
+// ── State ─────────────────────────────────────────────────────────────────────
+var mobileNetModel = null;
+var headModel      = null;
+var classNames     = ['healthy', 'unhealthy'];
+var isPredicting   = false;
+
+var statusDot        = document.getElementById('statusDot');
+var statusText       = document.getElementById('statusText');
+var dropZone         = document.getElementById('dropZone');
+var fileInput        = document.getElementById('fileInput');
+var previewImg       = document.getElementById('previewImg');
+var scanOverlay      = document.getElementById('scanOverlay');
+var uploadPrompt     = document.getElementById('uploadPrompt');
+var resultCard       = document.getElementById('resultCard');
+var resultName       = document.getElementById('resultName');
+var resultConf       = document.getElementById('resultConfidence');
+var confidenceFill   = document.getElementById('confidenceFill');
+var resultProbs      = document.getElementById('resultProbs');
+var resultDesc       = document.getElementById('resultDesc');
+var noModelBanner    = document.getElementById('noModelBanner');
+
+var DESCRIPTIONS = {
+  healthy:   'This coral appears healthy. Normal coloration and intact structure detected. Healthy coral supports diverse marine ecosystems and indicates good water quality.',
+  unhealthy: 'This coral shows signs of disease or bleaching. Unhealthy coral may have expelled its symbiotic algae due to thermal stress, pollution, or disease. Early detection helps inform conservation efforts.'
+};
+
+// ── Status helper ─────────────────────────────────────────────────────────────
+function setStatus(state, text) {
+  statusText.textContent = text;
+  statusDot.className = 'status-dot' + (state === 'ready' ? ' ready' : state === 'error' ? ' error' : '');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+async function init() {
+  setStatus('loading', 'Loading MobileNet...');
+  try {
+    mobileNetModel = await mobilenet.load({ version: 1, alpha: 1.0 });
+  } catch (err) {
+    console.error('Failed to load MobileNet:', err);
+    setStatus('error', 'Failed to load MobileNet');
+    return;
+  }
+
+  setStatus('loading', 'Checking for saved model...');
+  try {
+    headModel = await tf.loadLayersModel('indexeddb://coral-head-model');
+    // warm up the model with a dummy tensor to catch shape errors early
+    var dummy = tf.zeros([1, 1024]);
+    headModel.predict(dummy).dispose();
+    dummy.dispose();
+
+    var savedClasses = localStorage.getItem('coral-class-names');
+    if (savedClasses) {
+      try { classNames = JSON.parse(savedClasses); } catch (e) { /* keep defaults */ }
+    }
+    var trainDate = localStorage.getItem('coral-model-date');
+    var dateStr   = trainDate ? new Date(trainDate).toLocaleDateString() : 'unknown date';
+    setStatus('ready', 'Model ready · trained ' + dateStr);
+  } catch (err) {
+    headModel = null;
+    setStatus('error', 'No model — train first');
+    noModelBanner.classList.add('visible');
+    console.info('No saved model in IndexedDB. Use coral_trainer.html to train one.');
+  }
+}
+
+// ── Drag & drop ───────────────────────────────────────────────────────────────
+dropZone.addEventListener('dragover', function(e) {
+  e.preventDefault();
+  dropZone.classList.add('drag-over');
+});
+dropZone.addEventListener('dragleave', function() {
+  dropZone.classList.remove('drag-over');
+});
+dropZone.addEventListener('drop', function(e) {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  var file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) handleFile(file);
+});
+fileInput.addEventListener('change', function() {
+  if (fileInput.files[0]) handleFile(fileInput.files[0]);
+});
+
+// ── File handling ─────────────────────────────────────────────────────────────
+function handleFile(file) {
+  var reader = new FileReader();
+  reader.onerror = function() {
+    console.error('FileReader error reading file:', file.name);
+  };
+  reader.onload = function(e) {
+    var dataUrl = e.target.result;
+    var img = new Image();
+    img.onerror = function() {
+      console.error('Failed to decode image:', file.name);
+    };
+    img.onload = function() {
+      // swap into preview
+      previewImg.src = dataUrl;
+      previewImg.onload = function() {
+        previewImg.classList.add('visible');
+        uploadPrompt.style.display = 'none';
+        dropZone.classList.add('has-image');
+        runPredict(img);
+      };
+    };
+    img.src = dataUrl;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── Prediction ────────────────────────────────────────────────────────────────
+async function runPredict(imgEl) {
+  if (isPredicting) return;
+  if (!headModel || !mobileNetModel) {
+    noModelBanner.classList.add('visible');
+    return;
+  }
+
+  isPredicting = true;
+  scanOverlay.classList.add('active');
+  resultCard.classList.remove('visible', 'healthy', 'unhealthy');
+
+  await tf.nextFrame();
+
+  try {
+    // Extract embedding then predict — done outside tidy so we can await
+    var embedding = tf.tidy(function() {
+      return mobileNetModel.infer(imgEl, true); // shape [1, 1024]
+    });
+
+    var rawPreds = headModel.predict(embedding);
+    embedding.dispose();
+
+    var probsArray = await rawPreds.data();
+    rawPreds.dispose();
+
+    // Small delay so the scan animation looks intentional
+    await new Promise(function(res) { setTimeout(res, 800); });
+
+    scanOverlay.classList.remove('active');
+    showResult(Array.from(probsArray));
+  } catch (err) {
+    console.error('Prediction error:', err);
+    scanOverlay.classList.remove('active');
+    setStatus('error', 'Prediction failed — see console');
+  }
+
+  isPredicting = false;
+}
+
+function showResult(probsArray) {
+  var maxIdx     = probsArray.indexOf(Math.max.apply(null, probsArray));
+  var label      = classNames[maxIdx] !== undefined ? classNames[maxIdx] : ('class_' + maxIdx);
+  var confidence = probsArray[maxIdx];
+
+  var isHealthy  = label.toLowerCase().includes('healthy') && !label.toLowerCase().includes('un');
+  var stateClass = isHealthy ? 'healthy' : 'unhealthy';
+
+  resultCard.className = 'result-card visible ' + stateClass;
+  resultName.textContent = label.replace(/_/g, ' ').toUpperCase();
+  resultConf.textContent = (confidence * 100).toFixed(1) + '%';
+
+  requestAnimationFrame(function() {
+    confidenceFill.style.width = (confidence * 100) + '%';
+  });
+
+  // Per-class probability pills
+  resultProbs.innerHTML = classNames.map(function(cls, i) {
+    var isActive  = cls === label;
+    var color     = isActive ? (isHealthy ? '#00e676' : '#ff5252') : '#3f6880';
+    var pct       = probsArray[i] !== undefined ? (probsArray[i] * 100).toFixed(1) + '%' : '—';
+    return '<div class="prob-item">'
+      + '<div class="prob-item-label">' + cls.replace(/_/g, ' ') + '</div>'
+      + '<div class="prob-item-value" style="color:' + color + '">' + pct + '</div>'
+      + '</div>';
+  }).join('');
+
+  // Description
+  var descKey = Object.keys(DESCRIPTIONS).find(function(k) {
+    return label.toLowerCase().includes(k);
+  });
+  resultDesc.textContent = descKey ? DESCRIPTIONS[descKey] : 'Classification complete.';
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>

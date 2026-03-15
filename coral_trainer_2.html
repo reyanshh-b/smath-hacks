@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoralScan — Dev Trainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:              #040e18;
+    --surface:         #071624;
+    --surface2:        #0b2035;
+    --border:          #182f46;
+    --border-bright:   #264d6e;
+    --primary:         #00ccff;
+    --primary-dim:     rgba(0,204,255,0.1);
+    --healthy:         #00e676;
+    --healthy-hex:     #00e676;
+    --healthy-dim:     rgba(0,230,118,0.08);
+    --healthy-border:  rgba(0,230,118,0.3);
+    --unhealthy:       #ff5252;
+    --unhealthy-hex:   #ff5252;
+    --unhealthy-dim:   rgba(255,82,82,0.08);
+    --unhealthy-border:rgba(255,82,82,0.3);
+    --warning:         #ffb74d;
+    --text:            #c0dff0;
+    --text-muted:      #3a5f7a;
+    --font-display:    'Syne', sans-serif;
+    --font-mono:       'DM Mono', monospace;
+    --font-body:       'DM Sans', sans-serif;
+  }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 90% 50% at 10% 90%, rgba(0,70,110,0.14) 0%, transparent 55%),
+      radial-gradient(ellipse 70% 40% at 90% 10%, rgba(0,40,80,0.18) 0%, transparent 55%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrapper {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 1.5rem 5rem;
+  }
+
+  header {
+    padding: 2rem 0 1.5rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .logo { display: flex; align-items: center; gap: 0.75rem; }
+  .logo-icon {
+    width: 34px; height: 34px;
+    background: rgba(255,82,82,0.1);
+    border: 1px solid rgba(255,82,82,0.3);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+  }
+  .logo-text { font-family: var(--font-display); font-size: 1.1rem; font-weight: 800; color: #fff; }
+  .logo-badge {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    background: rgba(255,165,0,0.12);
+    border: 1px solid rgba(255,165,0,0.3);
+    color: var(--warning);
+    border-radius: 4px;
+    padding: 0.15rem 0.5rem;
+    letter-spacing: 0.08em;
+  }
+  .header-right { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+
+  .btn {
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    border: none;
+    border-radius: 8px;
+    padding: 0.6rem 1.2rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    text-decoration: none;
+  }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .btn-primary {
+    background: var(--primary);
+    color: #04101c;
+    box-shadow: 0 0 16px rgba(0,204,255,0.25);
+  }
+  .btn-primary:not(:disabled):hover {
+    background: #33d6ff;
+    box-shadow: 0 0 24px rgba(0,204,255,0.4);
+    transform: translateY(-1px);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:not(:disabled):hover { border-color: var(--primary); color: var(--primary); }
+  .btn-danger {
+    background: transparent;
+    color: var(--unhealthy);
+    border: 1px solid rgba(255,82,82,0.3);
+  }
+  .btn-danger:not(:disabled):hover { background: rgba(255,82,82,0.08); }
+
+  .page-title { margin-bottom: 2rem; }
+  .page-title h1 {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 0.4rem;
+  }
+  .page-title p { font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; }
+
+  .stats-bar { display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.75rem 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .stat-label { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; }
+  .stat-value { font-family: var(--font-mono); font-size: 1.1rem; font-weight: 500; color: var(--text); min-width: 24px; }
+  .stat-value.healthy   { color: var(--healthy); }
+  .stat-value.unhealthy { color: var(--unhealthy); }
+
+  .training-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  @media (max-width: 640px) { .training-grid { grid-template-columns: 1fr; } }
+
+  .class-panel { background: var(--surface); border-radius: 16px; overflow: hidden; }
+  .class-panel.panel-healthy   { border: 1px solid var(--healthy-border); }
+  .class-panel.panel-unhealthy { border: 1px solid var(--unhealthy-border); }
+
+  .panel-header { padding: 1rem 1.2rem; display: flex; align-items: center; justify-content: space-between; }
+  .panel-healthy   .panel-header { background: var(--healthy-dim);   border-bottom: 1px solid var(--healthy-border); }
+  .panel-unhealthy .panel-header { background: var(--unhealthy-dim); border-bottom: 1px solid var(--unhealthy-border); }
+
+  .panel-title {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .panel-healthy   .panel-title { color: var(--healthy); }
+  .panel-unhealthy .panel-title { color: var(--unhealthy); }
+
+  .panel-count { font-family: var(--font-mono); font-size: 0.7rem; padding: 0.2rem 0.6rem; border-radius: 20px; color: #fff; }
+  .panel-healthy   .panel-count { background: rgba(0,230,118,0.2); }
+  .panel-unhealthy .panel-count { background: rgba(255,82,82,0.2); }
+
+  .panel-drop {
+    margin: 1rem;
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 1.5rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+  }
+  .panel-drop input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .panel-healthy   .panel-drop:hover,
+  .panel-healthy   .panel-drop.drag-over { border-color: var(--healthy);   background: var(--healthy-dim); }
+  .panel-unhealthy .panel-drop:hover,
+  .panel-unhealthy .panel-drop.drag-over { border-color: var(--unhealthy); background: var(--unhealthy-dim); }
+
+  .drop-icon { font-size: 1.5rem; margin-bottom: 0.4rem; opacity: 0.5; }
+  .drop-text { font-size: 0.78rem; color: var(--text-muted); }
+  .drop-sub  { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-muted); opacity: 0.5; margin-top: 0.2rem; }
+
+  .image-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+    gap: 0.5rem;
+    padding: 0 1rem 1rem;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+  .image-grid:empty { display: none; }
+  .thumb-wrap { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+  .thumb-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb-remove {
+    position: absolute;
+    top: 2px; right: 2px;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.7);
+    border: none;
+    color: #fff;
+    font-size: 10px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .thumb-wrap:hover .thumb-remove { opacity: 1; }
+
+  .train-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  .train-section-title {
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+  }
+
+  .train-config { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; align-items: flex-end; }
+  .config-field { display: flex; flex-direction: column; gap: 0.4rem; }
+  .config-field label { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; }
+  .config-field input,
+  .config-field select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    width: 110px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .config-field input:focus,
+  .config-field select:focus { border-color: var(--primary); }
+
+  .train-actions { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+  .train-hint { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); }
+
+  .progress-area { margin-top: 1.25rem; display: none; }
+  .progress-area.visible { display: block; }
+
+  .progress-meta { display: flex; justify-content: space-between; margin-bottom: 0.4rem; }
+  .progress-meta span { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted); }
+  .progress-meta .acc-text { color: var(--primary); }
+
+  .progress-track {
+    height: 4px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #0090cc, #00ccff);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.4s;
+    box-shadow: 0 0 8px rgba(0,204,255,0.4);
+  }
+
+  .epoch-log { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted); max-height: 120px; overflow-y: auto; line-height: 1.8; }
+  .epoch-log .log-good { color: #00e676; }
+  .epoch-log .log-info { color: var(--primary); }
+  .epoch-log .log-warn { color: var(--warning); }
+
+  .success-banner {
+    background: rgba(0,230,118,0.07);
+    border: 1px solid rgba(0,230,118,0.25);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    display: none;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+  .success-banner.visible { display: flex; }
+  .success-banner p { font-size: 0.82rem; color: #a5f3c8; line-height: 1.6; }
+  .success-banner a { color: #00e676; font-weight: 600; }
+
+  .log-section { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+  .log-header {
+    padding: 0.75rem 1.2rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .log-header span { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; }
+  .console { font-family: var(--font-mono); font-size: 0.7rem; line-height: 1.9; padding: 0.75rem 1.2rem; max-height: 180px; overflow-y: auto; color: var(--text-muted); }
+  .console .c-info    { color: #00ccff; }
+  .console .c-success { color: #00e676; }
+  .console .c-warn    { color: #ffb74d; }
+  .console .c-error   { color: #ff5252; }
+  .console .c-dim     { opacity: 0.4; }
+</style>
+</head>
+<body>
+
+<div class="wrapper">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🔬</div>
+      <div>
+        <div class="logo-text">CoralScan Trainer</div>
+      </div>
+      <span class="logo-badge">DEV TOOL</span>
+    </div>
+    <div class="header-right">
+      <button class="btn btn-danger" id="clearModelBtn">🗑 Clear Saved Model</button>
+      <a href="coral_detector.html" class="btn btn-ghost">← Back to Detector</a>
+    </div>
+  </header>
+
+  <div class="page-title">
+    <h1>Train the Coral Health Model</h1>
+    <p>Upload labeled images for each class, configure training, then click Train. The model is saved to your browser and immediately available in the detector.</p>
+  </div>
+
+  <div class="success-banner" id="successBanner">
+    <span>✅</span>
+    <p>Model trained and saved successfully. <a href="coral_detector.html">Open the detector →</a> to test it with new images.</p>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat">
+      <div>
+        <div class="stat-label">Healthy</div>
+        <div class="stat-value healthy" id="statHealthy">0</div>
+      </div>
+    </div>
+    <div class="stat">
+      <div>
+        <div class="stat-label">Unhealthy</div>
+        <div class="stat-value unhealthy" id="statUnhealthy">0</div>
+      </div>
+    </div>
+    <div class="stat">
+      <div>
+        <div class="stat-label">Total</div>
+        <div class="stat-value" id="statTotal">0</div>
+      </div>
+    </div>
+    <div class="stat">
+      <div>
+        <div class="stat-label">MobileNet</div>
+        <div class="stat-value" id="statMobileNet" style="font-size:0.75rem">Loading...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="training-grid">
+    <div class="class-panel panel-healthy">
+      <div class="panel-header">
+        <div class="panel-title"><span>●</span> Healthy Coral</div>
+        <span class="panel-count" id="healthyCount">0 images</span>
+      </div>
+      <div class="panel-drop" id="healthyDrop">
+        <input type="file" id="healthyInput" accept="image/*" multiple>
+        <div class="drop-icon">🪸</div>
+        <div class="drop-text">Drop healthy coral images here</div>
+        <div class="drop-sub">JPG, PNG, WEBP · multiple files OK</div>
+      </div>
+      <div class="image-grid" id="healthyGrid"></div>
+    </div>
+
+    <div class="class-panel panel-unhealthy">
+      <div class="panel-header">
+        <div class="panel-title"><span>●</span> Unhealthy Coral</div>
+        <span class="panel-count" id="unhealthyCount">0 images</span>
+      </div>
+      <div class="panel-drop" id="unhealthyDrop">
+        <input type="file" id="unhealthyInput" accept="image/*" multiple>
+        <div class="drop-icon">☠️</div>
+        <div class="drop-text">Drop unhealthy coral images here</div>
+        <div class="drop-sub">bleached, diseased, or dead coral</div>
+      </div>
+      <div class="image-grid" id="unhealthyGrid"></div>
+    </div>
+  </div>
+
+  <div class="train-section">
+    <div class="train-section-title">Training Configuration</div>
+    <div class="train-config">
+      <div class="config-field">
+        <label>Epochs</label>
+        <input type="number" id="cfgEpochs" value="30" min="5" max="100">
+      </div>
+      <div class="config-field">
+        <label>Learning Rate</label>
+        <select id="cfgLR">
+          <option value="0.001">0.001</option>
+          <option value="0.0005" selected>0.0005</option>
+          <option value="0.0001">0.0001</option>
+        </select>
+      </div>
+      <div class="config-field">
+        <label>Batch Size</label>
+        <input type="number" id="cfgBatch" value="8" min="2" max="32">
+      </div>
+    </div>
+
+    <div class="train-actions">
+      <button class="btn btn-primary" id="trainBtn" disabled>⚡ Train Model</button>
+      <span class="train-hint" id="trainHint">Upload at least 2 images per class to enable training.</span>
+    </div>
+
+    <div class="progress-area" id="progressArea">
+      <div class="progress-meta">
+        <span id="progressLabel">Epoch 0 / 0</span>
+        <span class="acc-text" id="progressAcc">acc: —</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div class="epoch-log" id="epochLog"></div>
+    </div>
+  </div>
+
+  <div class="log-section">
+    <div class="log-header">
+      <span>System Console</span>
+      <button class="btn btn-ghost" style="padding:0.3rem 0.7rem;font-size:0.65rem" id="clearConsoleBtn">Clear</button>
+    </div>
+    <div class="console" id="consoleEl"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.0/dist/mobilenet.min.js"></script>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+var mobileNetModel = null;
+var healthyImgs    = [];
+var unhealthyImgs  = [];
+var isTraining     = false;
+var CLASSES        = ['healthy', 'unhealthy'];
+var EMBEDDING_DIM  = 1024;
+
+// ── DOM refs ──────────────────────────────────────────────────────────────────
+var trainBtn      = document.getElementById('trainBtn');
+var trainHint     = document.getElementById('trainHint');
+var progressArea  = document.getElementById('progressArea');
+var progressFill  = document.getElementById('progressFill');
+var progressLabel = document.getElementById('progressLabel');
+var progressAcc   = document.getElementById('progressAcc');
+var epochLog      = document.getElementById('epochLog');
+var successBanner = document.getElementById('successBanner');
+var consoleEl     = document.getElementById('consoleEl');
+var statHealthy   = document.getElementById('statHealthy');
+var statUnhealthy = document.getElementById('statUnhealthy');
+var statTotal     = document.getElementById('statTotal');
+var statMobileNet = document.getElementById('statMobileNet');
+
+document.getElementById('clearConsoleBtn').addEventListener('click', function() {
+  consoleEl.innerHTML = '';
+});
+
+// ── Console ───────────────────────────────────────────────────────────────────
+function log(msg, type) {
+  type = type || 'info';
+  var el = document.createElement('div');
+  el.className = 'c-' + type;
+  var ts = new Date().toLocaleTimeString('en-US', { hour12: false });
+  el.textContent = '[' + ts + '] ' + msg;
+  consoleEl.appendChild(el);
+  consoleEl.scrollTop = consoleEl.scrollHeight;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+async function init() {
+  log('Initializing TensorFlow.js ' + tf.version.tfjs + '...', 'info');
+  try {
+    statMobileNet.textContent = 'Loading...';
+    log('Loading MobileNet v1 (alpha=1.0)...', 'info');
+    mobileNetModel = await mobilenet.load({ version: 1, alpha: 1.0 });
+    statMobileNet.textContent = 'Ready';
+    statMobileNet.style.color = '#00e676';
+    log('MobileNet loaded. Embedding dimension: ' + EMBEDDING_DIM, 'success');
+    checkTrainReady();
+  } catch (err) {
+    statMobileNet.textContent = 'Error';
+    statMobileNet.style.color = '#ff5252';
+    log('Failed to load MobileNet: ' + err.message, 'error');
+    console.error('MobileNet load error:', err);
+  }
+
+  // Check for existing model
+  try {
+    var existing = await tf.loadLayersModel('indexeddb://coral-head-model');
+    existing.dispose();
+    var trainDate = localStorage.getItem('coral-model-date');
+    var dateStr = trainDate ? new Date(trainDate).toLocaleDateString() : 'unknown date';
+    log('Found existing saved model (trained ' + dateStr + ').', 'success');
+  } catch (err) {
+    log('No existing model found — train one to get started.', 'warn');
+  }
+}
+
+// ── Drop zone setup ───────────────────────────────────────────────────────────
+function setupDropZone(dropEl, inputEl, label) {
+  dropEl.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    dropEl.classList.add('drag-over');
+  });
+  dropEl.addEventListener('dragleave', function() {
+    dropEl.classList.remove('drag-over');
+  });
+  dropEl.addEventListener('drop', function(e) {
+    e.preventDefault();
+    dropEl.classList.remove('drag-over');
+    var files = Array.from(e.dataTransfer.files).filter(function(f) {
+      return f.type.startsWith('image/');
+    });
+    files.forEach(function(f) { addImage(f, label); });
+  });
+  inputEl.addEventListener('change', function() {
+    Array.from(inputEl.files).forEach(function(f) { addImage(f, label); });
+    inputEl.value = '';
+  });
+}
+
+setupDropZone(
+  document.getElementById('healthyDrop'),
+  document.getElementById('healthyInput'),
+  'healthy'
+);
+setupDropZone(
+  document.getElementById('unhealthyDrop'),
+  document.getElementById('unhealthyInput'),
+  'unhealthy'
+);
+
+function addImage(file, label) {
+  var reader = new FileReader();
+  reader.onerror = function() {
+    log('Failed to read file: ' + file.name, 'error');
+  };
+  reader.onload = function(e) {
+    var dataUrl = e.target.result;
+    var img = new Image();
+    img.onerror = function() {
+      log('Failed to decode image: ' + file.name, 'error');
+    };
+    img.onload = function() {
+      var arr     = label === 'healthy' ? healthyImgs : unhealthyImgs;
+      var grid    = document.getElementById(label === 'healthy' ? 'healthyGrid' : 'unhealthyGrid');
+      var countEl = document.getElementById(label === 'healthy' ? 'healthyCount' : 'unhealthyCount');
+
+      arr.push(img);
+      log('Added ' + label + ' image: ' + file.name + ' (' + arr.length + ' total)', 'dim');
+
+      // Thumbnail
+      var wrap = document.createElement('div');
+      wrap.className = 'thumb-wrap';
+      var thumb = document.createElement('img');
+      thumb.src = dataUrl;
+      var removeBtn = document.createElement('button');
+      removeBtn.className = 'thumb-remove';
+      removeBtn.textContent = '×';
+      removeBtn.type = 'button';
+      (function(capturedImg) {
+        removeBtn.onclick = function() {
+          var idx = arr.indexOf(capturedImg);
+          if (idx > -1) arr.splice(idx, 1);
+          wrap.remove();
+          updateStats();
+          checkTrainReady();
+        };
+      })(img);
+      wrap.appendChild(thumb);
+      wrap.appendChild(removeBtn);
+      grid.appendChild(wrap);
+
+      countEl.textContent = arr.length + ' image' + (arr.length !== 1 ? 's' : '');
+      updateStats();
+      checkTrainReady();
+    };
+    img.src = dataUrl;
+  };
+  reader.readAsDataURL(file);
+}
+
+function updateStats() {
+  statHealthy.textContent   = healthyImgs.length;
+  statUnhealthy.textContent = unhealthyImgs.length;
+  statTotal.textContent     = healthyImgs.length + unhealthyImgs.length;
+}
+
+function checkTrainReady() {
+  var ready = healthyImgs.length >= 2 && unhealthyImgs.length >= 2 && mobileNetModel !== null && !isTraining;
+  trainBtn.disabled = !ready;
+  if (ready) {
+    trainHint.textContent = 'Ready to train on ' + (healthyImgs.length + unhealthyImgs.length) + ' images.';
+  } else {
+    trainHint.textContent = 'Upload at least 2 images per class to enable training.';
+  }
+}
+
+// ── Training ──────────────────────────────────────────────────────────────────
+trainBtn.addEventListener('click', trainModel);
+
+async function trainModel() {
+  if (isTraining || !mobileNetModel) return;
+  isTraining = true;
+  trainBtn.disabled = true;
+  trainBtn.textContent = '⏳ Training...';
+  successBanner.classList.remove('visible');
+
+  var epochs    = parseInt(document.getElementById('cfgEpochs').value)  || 30;
+  var lr        = parseFloat(document.getElementById('cfgLR').value)     || 0.0005;
+  var batchSize = parseInt(document.getElementById('cfgBatch').value)    || 8;
+
+  // Use validation split only if we have enough data
+  var totalSamples = healthyImgs.length + unhealthyImgs.length;
+  var valSplit = totalSamples >= 10 ? 0.2 : 0.0;
+
+  progressArea.classList.add('visible');
+  epochLog.innerHTML = '';
+  progressFill.style.width = '0%';
+  progressFill.style.background = 'linear-gradient(90deg, #0090cc, #00ccff)';
+
+  log('Starting training: epochs=' + epochs + ', lr=' + lr + ', batch=' + batchSize + ', val_split=' + valSplit, 'info');
+  log('Dataset: ' + healthyImgs.length + ' healthy + ' + unhealthyImgs.length + ' unhealthy', 'info');
+
+  try {
+    // ── 1. Extract embeddings ──────────────────────────────────────────────────
+    log('Extracting MobileNet embeddings...', 'info');
+    addEpochLog('Extracting features from all images...', 'log-info');
+
+    var allImages = [];
+    healthyImgs.forEach(function(img)   { allImages.push({ img: img, labelIdx: 0 }); });
+    unhealthyImgs.forEach(function(img) { allImages.push({ img: img, labelIdx: 1 }); });
+
+    // Shuffle
+    for (var i = allImages.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = allImages[i]; allImages[i] = allImages[j]; allImages[j] = tmp;
+    }
+
+    var embeddingList = [];
+    var labelList     = [];
+
+    for (var k = 0; k < allImages.length; k++) {
+      var item = allImages[k];
+      var emb = tf.tidy(function() {
+        // infer returns [1, 1024]; squeeze to [1024] for stacking
+        return mobileNetModel.infer(item.img, true).squeeze();
+      });
+      embeddingList.push(emb);
+      labelList.push(item.labelIdx);
+      await tf.nextFrame();
+    }
+
+    log('Embeddings extracted: ' + embeddingList.length + ' x ' + EMBEDDING_DIM, 'success');
+
+    var X = tf.stack(embeddingList);
+    var Y = tf.oneHot(tf.tensor1d(labelList, 'int32'), 2);
+    embeddingList.forEach(function(e) { e.dispose(); });
+
+    // ── 2. Build head model ────────────────────────────────────────────────────
+    // No BatchNormalization — it causes NaN with very small datasets
+    var headModel = tf.sequential({
+      layers: [
+        tf.layers.dense({
+          inputShape: [EMBEDDING_DIM],
+          units: 256,
+          activation: 'relu',
+          kernelRegularizer: tf.regularizers.l2({ l2: 1e-4 })
+        }),
+        tf.layers.dropout({ rate: 0.4 }),
+        tf.layers.dense({ units: 128, activation: 'relu' }),
+        tf.layers.dropout({ rate: 0.3 }),
+        tf.layers.dense({ units: 2,   activation: 'softmax' })
+      ]
+    });
+
+    headModel.compile({
+      optimizer: tf.train.adam(lr),
+      loss: 'categoricalCrossentropy',
+      metrics: ['accuracy']
+    });
+
+    log('Head model built: ' + headModel.countParams().toLocaleString() + ' parameters', 'info');
+    addEpochLog('Model ready. Training for ' + epochs + ' epochs...', 'log-info');
+
+    // ── 3. Train ───────────────────────────────────────────────────────────────
+    await headModel.fit(X, Y, {
+      epochs:          epochs,
+      batchSize:       batchSize,
+      validationSplit: valSplit,
+      shuffle:         true,
+      callbacks: {
+        onEpochEnd: async function(epoch, logs) {
+          var pct    = ((epoch + 1) / epochs) * 100;
+          var acc    = ((logs.acc !== undefined ? logs.acc : (logs.accuracy || 0)) * 100);
+          var valAcc = ((logs.val_acc !== undefined ? logs.val_acc : (logs.val_accuracy || 0)) * 100);
+          var loss   = (logs.loss || 0).toFixed(4);
+
+          progressFill.style.width  = pct + '%';
+          progressLabel.textContent = 'Epoch ' + (epoch + 1) + ' / ' + epochs;
+          progressAcc.textContent   = 'acc: ' + acc.toFixed(1) + '%' + (valSplit > 0 ? '  val: ' + valAcc.toFixed(1) + '%' : '');
+
+          var cls = (valSplit > 0 ? valAcc : acc) >= 80 ? 'log-good' : (valSplit > 0 ? valAcc : acc) >= 60 ? 'log-info' : 'log-warn';
+          var msg = 'Epoch ' + String(epoch + 1).padStart(3, ' ')
+            + ' | loss: ' + loss
+            + ' | acc: ' + acc.toFixed(1) + '%'
+            + (valSplit > 0 ? ' | val: ' + valAcc.toFixed(1) + '%' : '');
+          addEpochLog(msg, cls);
+          await tf.nextFrame();
+        },
+        onTrainEnd: function() {
+          log('Training loop complete.', 'success');
+        }
+      }
+    });
+
+    X.dispose();
+    Y.dispose();
+
+    // ── 4. Save to IndexedDB ───────────────────────────────────────────────────
+    log('Saving model to IndexedDB...', 'info');
+    await headModel.save('indexeddb://coral-head-model');
+    localStorage.setItem('coral-class-names', JSON.stringify(CLASSES));
+    localStorage.setItem('coral-model-date', new Date().toISOString());
+    localStorage.setItem('coral-model-samples', JSON.stringify({
+      healthy:   healthyImgs.length,
+      unhealthy: unhealthyImgs.length
+    }));
+
+    headModel.dispose();
+
+    log('Model saved successfully.', 'success');
+    addEpochLog('Done! Model saved to browser storage.', 'log-good');
+
+    successBanner.classList.add('visible');
+    progressFill.style.background = 'linear-gradient(90deg, #00b248, #00e676)';
+    trainBtn.textContent = '✓ Trained & Saved';
+
+  } catch (err) {
+    log('Training failed: ' + err.message, 'error');
+    console.error('Training error:', err);
+    trainBtn.textContent = '⚡ Train Model';
+    trainBtn.disabled = false;
+    addEpochLog('Error: ' + err.message, 'log-warn');
+  }
+
+  isTraining = false;
+}
+
+function addEpochLog(msg, cls) {
+  var line = document.createElement('span');
+  if (cls) line.className = cls;
+  line.textContent = msg;
+  line.style.display = 'block';
+  epochLog.appendChild(line);
+  epochLog.scrollTop = epochLog.scrollHeight;
+}
+
+// ── Clear model ───────────────────────────────────────────────────────────────
+document.getElementById('clearModelBtn').addEventListener('click', async function() {
+  if (!confirm('Delete the saved model from IndexedDB?')) return;
+  try {
+    await tf.io.removeModel('indexeddb://coral-head-model');
+    localStorage.removeItem('coral-class-names');
+    localStorage.removeItem('coral-model-date');
+    localStorage.removeItem('coral-model-samples');
+    log('Saved model deleted from IndexedDB.', 'warn');
+    successBanner.classList.remove('visible');
+    trainBtn.textContent = '⚡ Train Model';
+    checkTrainReady();
+  } catch (err) {
+    log('No model to delete, or delete failed: ' + err.message, 'warn');
+  }
+});
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
