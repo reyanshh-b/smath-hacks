@@ -1,5 +1,0 @@
-flask
-tensorflow>=2.10
-numpy
-pillow
-gunicorn
