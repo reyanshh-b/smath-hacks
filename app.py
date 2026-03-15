@@ -1,5 +1,5 @@
 """
-CoralScan - Coral Disease Detector
+CoralScan - Coral Disease Detector with AI
 app.py: Gradio web app that runs coral disease detection on uploaded video.
 
 Run with:

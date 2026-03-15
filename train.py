@@ -1,6 +1,6 @@
 """
 CoralScan — Python Offline Trainer
-===================================
+====================================
 For devs who want to train a more powerful model using a full dataset.
 The trained model is saved as both .h5 (for Python/Flask) and also
 exported to TF.js format so it can be loaded in the browser.
@@ -13,7 +13,7 @@ Data directory structure:
     healthy/
       img1.jpg
       img2.jpg
-      ...
+      ... 
     unhealthy/
       img1.jpg
       img2.jpg
