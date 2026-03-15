@@ -15,7 +15,7 @@ os.makedirs(FEEDBACK_FOLDER, exist_ok=True)
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
 # load class names
-CLASS_NAMES = load_class_names('models/class_names.txt')
+CLASS_NAMES = ["unhealthy", "healthy"]  # default class names
 
 # try to load model at startup (support .keras or .h5)
 model = None
